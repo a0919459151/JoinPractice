@@ -12,15 +12,6 @@ public class AppDbContext : DbContext
     // Comment
     public DbSet<Comment> Comments { get; set; }
 
-    public AppDbContext()
-    {
-        
-    }
-
-    public AppDbContext(DbContextOptions options) : base(options)
-    {
-    }
-
     // On configuring
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
