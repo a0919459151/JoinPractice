@@ -9,7 +9,7 @@ internal class Program
     static async Task Main(string[] args)
     {
         // Init data
-        // DataSeeding();
+        //await DataSeeding();
 
         using (var context = new AppDbContext())
         {
@@ -18,12 +18,23 @@ internal class Program
             await BlogLeftJoinPosts(context);
 
             await BlogInnerJoinPosts(context);
+            
+            /* one-to-many relationship end */
+
 
             /* many-to-one relationship */
 
             await PostLeftJoinBlog(context);
 
             await PostInnerJoinBlog(context);
+
+            /* many-to-one relationship end */
+
+
+            /* one-to-one relationship */
+
+            /* one-to-one relationship end */
+
         }
     }
 
@@ -39,9 +50,16 @@ internal class Program
     private static async Task PostInnerJoinBlogWithNavProp(AppDbContext context)
     {
         var postQuery = context.Posts
-            .Include(p => p.Blog);
+            .Include(p => p.Blog)
+            .Where(p => p.Blog != null);
 
         var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[BlogId], [p].[Content], [p].[CreateAt], [p].[Title], [b].[Id], [b].[CreateAt], [b].[Name]
+            FROM [Posts] AS [p]
+            LEFT JOIN [Blogs] AS [b] ON [p].[BlogId] = [b].[Id]
+            WHERE [b].[Id] IS NOT NULL
+         */
 
         var posts = await postQuery.ToListAsync();
     }
@@ -56,10 +74,16 @@ internal class Program
                             Title = post.Title,
                             Content = post.Content,
                             CreateAt = post.CreateAt,
+                            BlogId = post.BlogId,
                             Blog = blog
                         };
 
         var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[Title], [p].[Content], [p].[CreateAt], [p].[BlogId], [b].[Id], [b].[CreateAt], [b].[Name]
+            FROM [Posts] AS [p]
+            INNER JOIN [Blogs] AS [b] ON [p].[BlogId] = [b].[Id]
+         */
 
         var posts = await postQuery.ToListAsync();
     }
@@ -77,10 +101,16 @@ internal class Program
                     Title = post.Title,
                     Content = post.Content,
                     CreateAt = post.CreateAt,
+                    BlogId = post.BlogId,
                     Blog = blog
                 });
 
         var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[Title], [p].[Content], [p].[CreateAt], [b].[Id], [b].[CreateAt], [b].[Name]
+            FROM [Posts] AS [p]
+            INNER JOIN [Blogs] AS [b] ON [p].[BlogId] = [b].[Id]
+         */
 
         var posts = await postQuery.ToListAsync();
     }
@@ -103,7 +133,7 @@ internal class Program
         /*
             SELECT [p].[Id], [p].[BlogId], [p].[Content], [p].[CreateAt], [p].[Title], [b].[Id], [b].[CreateAt], [b].[Name]
             FROM [Posts] AS [p]
-            INNER JOIN [Blogs] AS [b] ON [p].[BlogId] = [b].[Id]
+            LEFT JOIN [Blogs] AS [b] ON [p].[BlogId] = [b].[Id]
         */
 
         var posts = await postQuery.ToListAsync();
@@ -125,7 +155,11 @@ internal class Program
                         };
 
         var sql = postQuery.ToQueryString();
-
+        /*
+            SELECT [p].[Id], [p].[Title], [p].[Content], [p].[CreateAt], [p].[BlogId], [b].[Id], [b].[CreateAt], [b].[Name]
+            FROM [Posts] AS [p]
+            LEFT JOIN [Blogs] AS [b] ON [p].[BlogId] = [b].[Id]
+        */
 
         var posts = await postQuery.ToListAsync();
     }
@@ -345,30 +379,38 @@ internal class Program
     }
 
     #region Data seed
-    private static async void DataSeeding()
+    private static async Task DataSeeding()
     {
         using (var context = new AppDbContext())
         {
-            // Init DB
-            InitDB(context);
-
             context.Database.EnsureCreated();
+            
+            // Begin transaction
+            using var transaction = await context.Database.BeginTransactionAsync();
 
-            if (context.Blogs.Any()) return;
+            // Init DB
+            await InitDB(context);
 
             await CreateTechBlog(context);  // Insert Tech Blog
 
             await CreateCookBlog(context);  // Insert Cook BLog
 
-            context.SaveChanges();
+            await CreatePost(context);  // Insert Post
+
+            await context.SaveChangesAsync();
+
+            // Commit transaction
+            await transaction.CommitAsync();
         }
     }
 
-    private static void InitDB(AppDbContext context)
+    private static async Task InitDB(AppDbContext context)
     {
         context.Comments.RemoveRange(context.Comments);
         context.Posts.RemoveRange(context.Posts);
         context.Blogs.RemoveRange(context.Blogs);
+
+        await context.SaveChangesAsync();
     }
 
     private static async Task CreateTechBlog(AppDbContext context)
@@ -409,10 +451,23 @@ internal class Program
 
     private static async Task CreateCookBlog(AppDbContext context)
     {
-        // Create a new blog
+        // Create a new blog with no posts
         var blog = new Blog { Name = "Cook blog", CreateAt = DateTime.Now };
 
         await context.Blogs.AddAsync(blog);
+    }
+
+    private static async Task CreatePost(AppDbContext context)
+    {
+        // Create a new post without a blog
+        var post = new Post
+        {
+            Title = "Entity Framework Core",
+            Content = "Content about EF Core",
+            CreateAt = DateTime.Now
+        };
+
+        await context.Posts.AddAsync(post);
     }
     #endregion
 }
