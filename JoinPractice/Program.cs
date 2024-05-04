@@ -1,7 +1,6 @@
 ﻿using JoinPractice.EFCore;
 using JoinPractice.EFCore.DBEntities;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Metadata;
 
 namespace JoinPractice;
 
@@ -14,12 +13,151 @@ internal class Program
 
         using (var context = new AppDbContext())
         {
-            // Left join, one-to-many relationship
+            /* one-to-many relationship */
+
             await BlogLeftJoinPosts(context);
-            // Inner join, one-to-many relationship
+
             await BlogInnerJoinPosts(context);
 
+            /* many-to-one relationship */
+
+            await PostLeftJoinBlog(context);
+
+            await PostInnerJoinBlog(context);
         }
+    }
+
+    private static async Task PostInnerJoinBlog(AppDbContext context)
+    {
+        await PostInnerJoinBlogWithNavProp(context);
+
+        await PostInnerJoinBlogWithLinQ(context);
+
+        await PostInnerJoinBlogWithLambda(context);
+    }
+
+    private static async Task PostInnerJoinBlogWithNavProp(AppDbContext context)
+    {
+        var postQuery = context.Posts
+            .Include(p => p.Blog);
+
+        var sql = postQuery.ToQueryString();
+
+        var posts = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostInnerJoinBlogWithLinQ(AppDbContext context)
+    {
+        var postQuery = from post in context.Posts
+                        join blog in context.Blogs on post.BlogId equals blog.Id
+                        select new Post
+                        {
+                            Id = post.Id,
+                            Title = post.Title,
+                            Content = post.Content,
+                            CreateAt = post.CreateAt,
+                            Blog = blog
+                        };
+
+        var sql = postQuery.ToQueryString();
+
+        var posts = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostInnerJoinBlogWithLambda(AppDbContext context)
+    {
+        var postQuery = context.Posts
+            .Join(
+                context.Blogs,
+                post => post.BlogId,
+                blog => blog.Id,
+                (post, blog) => new Post
+                {
+                    Id = post.Id,
+                    Title = post.Title,
+                    Content = post.Content,
+                    CreateAt = post.CreateAt,
+                    Blog = blog
+                });
+
+        var sql = postQuery.ToQueryString();
+
+        var posts = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostLeftJoinBlog(AppDbContext context)
+    {
+        await PostLeftJoinBlogWithNavProp(context);
+
+        await PostLeftJoinBlogWithLinQ(context);
+
+        await PostLeftJoinBlogWithLambda(context);
+    }
+
+    private static async Task PostLeftJoinBlogWithNavProp(AppDbContext context)
+    {
+        var postQuery = context.Posts
+            .Include(p => p.Blog);
+
+        var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[BlogId], [p].[Content], [p].[CreateAt], [p].[Title], [b].[Id], [b].[CreateAt], [b].[Name]
+            FROM [Posts] AS [p]
+            INNER JOIN [Blogs] AS [b] ON [p].[BlogId] = [b].[Id]
+        */
+
+        var posts = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostLeftJoinBlogWithLinQ(AppDbContext context)
+    {
+        var postQuery = from post in context.Posts
+                        join blog in context.Blogs on post.BlogId equals blog.Id into blogs
+                        from blog in blogs.DefaultIfEmpty()
+                        select new Post
+                        {
+                            Id = post.Id,
+                            Title = post.Title,
+                            Content = post.Content,
+                            CreateAt = post.CreateAt,
+                            BlogId = post.BlogId,
+                            Blog = blog
+                        };
+
+        var sql = postQuery.ToQueryString();
+
+
+        var posts = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostLeftJoinBlogWithLambda(AppDbContext context)
+    {
+        var postQuery = context.Posts
+            .GroupJoin(
+                context.Blogs,
+                post => post.BlogId,
+                blog => blog.Id,
+                (post, blogs) => new { post, blogs })
+            .SelectMany(
+                g => g.blogs.DefaultIfEmpty(),
+                (g, blog) => new Post
+                {
+                    Id = g.post.Id,
+                    Title = g.post.Title,
+                    Content = g.post.Content,
+                    CreateAt = g.post.CreateAt,
+                    BlogId = g.post.BlogId,
+                    Blog = blog
+                });
+
+        var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[Title], [p].[Content], [p].[CreateAt], [p].[BlogId], [b].[Id], [b].[CreateAt], [b].[Name]
+            FROM [Posts] AS [p]
+            LEFT JOIN [Blogs] AS [b] ON [p].[BlogId] = [b].[Id]
+        */
+
+        var posts = await postQuery.ToListAsync();
     }
 
     private static async Task BlogLeftJoinPosts(AppDbContext context)
@@ -29,8 +167,6 @@ internal class Program
         await BlogLeftJoinPostsWithLinQ(context);
 
         await BlogLeftJoinPostsWithLambda(context);
-
-        return;
     }
 
     private static async Task BlogLeftJoinPostsWithNavProp(AppDbContext context)
@@ -80,10 +216,10 @@ internal class Program
     {
         var blogQuery = context.Blogs
             .GroupJoin(
-            context.Posts,
-            blog => blog.Id,
-            post => post.BlogId,
-            (blog, posts) => new { blog, posts })
+                context.Posts,
+                blog => blog.Id,
+                post => post.BlogId,
+                (blog, posts) => new { blog, posts })
             .Select(g => new Blog
             {
                 Id = g.blog.Id,
