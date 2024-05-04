@@ -15,7 +15,7 @@ public class Post
     public DateTime CreateAt { get; set; }
 
     // Blog
-    public int BlogId { get; set; }
+    public int? BlogId { get; set; }
     public Blog? Blog { get; set; }
 
     // Comments
