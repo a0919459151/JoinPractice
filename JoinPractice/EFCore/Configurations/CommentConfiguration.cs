@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace JoinPractice.EFCore.Contigurations;
 
-public class CommentContiguration : IEntityTypeConfiguration<Comment>
+public class CommentConfiguration : IEntityTypeConfiguration<Comment>
 {
     public void Configure(EntityTypeBuilder<Comment> builder)
     {

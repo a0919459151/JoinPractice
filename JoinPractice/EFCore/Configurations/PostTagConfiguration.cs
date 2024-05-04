@@ -2,13 +2,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace JoinPractice.EFCore.Contigurations;
+namespace JoinPractice.EFCore.Configurations;
 
-public class BlogContiguration : IEntityTypeConfiguration<Blog>
+public class PostTagConfiguration : IEntityTypeConfiguration<PostTag>
 {
-    public void Configure(EntityTypeBuilder<Blog> builder)
+    public void Configure(EntityTypeBuilder<PostTag> builder)
     {
-        builder.ToTable("Blogs");
+        builder.ToTable("PostTags");
 
         builder.HasKey(x => x.Id);
 

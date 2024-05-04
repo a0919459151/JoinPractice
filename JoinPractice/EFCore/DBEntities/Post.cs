@@ -18,6 +18,9 @@ public class Post
     public int? BlogId { get; set; }
     public Blog? Blog { get; set; }
 
+    // PostTags
+    public ICollection<PostTag>? PostTags { get; set; }
+
     // Comments
     public ICollection<Comment>? Comments { get; set; }
 }

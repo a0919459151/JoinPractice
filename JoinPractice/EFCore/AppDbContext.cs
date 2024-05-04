@@ -7,6 +7,8 @@ public class AppDbContext : DbContext
 {
     // Blog
     public DbSet<Blog> Blogs { get; set; }
+    // PostTag
+    public DbSet<PostTag> PostTags { get; set; }
     // Post
     public DbSet<Post> Posts { get; set; }
     // Comment
