@@ -2,14 +2,15 @@
 
 public class PostTag
 {
-    // Id
-    public int Id { get; set; }
-
-    // Name
-    public string Name { get; set; } = null!;
+    // CreateAt
+    public DateTime CreateAt { get; set; } = DateTime.Now;
 
 
-    // Posts
-    public ICollection<Post>? Posts { get; set; }
-    
+    // PostId
+    public int PostId { get; set; }
+    public required Post Post { get; set; }
+
+    // TagId
+    public int TagId { get; set; }
+    public required Tag Tag { get; set; }
 }

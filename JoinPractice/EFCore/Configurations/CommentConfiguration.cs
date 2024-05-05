@@ -8,12 +8,20 @@ public class CommentConfiguration : IEntityTypeConfiguration<Comment>
 {
     public void Configure(EntityTypeBuilder<Comment> builder)
     {
+        // Table
         builder.ToTable("Comments");
 
+        // Primary Key
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Content).IsRequired().HasMaxLength(100);
+        // Property
+        builder.Property(x => x.Content)
+            .IsRequired()
+            .HasMaxLength(100);
 
-        builder.HasOne(x => x.Post).WithMany(x => x.Comments).HasForeignKey(x => x.PostId);
+        // Navigation
+        builder.HasOne(x => x.Post)
+            .WithMany(x => x.Comments)
+            .HasForeignKey(x => x.PostId);
     }
 }

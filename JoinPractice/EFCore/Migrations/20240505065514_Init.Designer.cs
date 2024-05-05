@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JoinPractice.EFCore.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20240504175359_Update_Post_BlogIdNullable")]
-    partial class Update_Post_BlogIdNullable
+    [Migration("20240505065514_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -62,7 +62,7 @@ namespace JoinPractice.EFCore.Migrations
                     b.Property<DateTime>("CreateAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("PostId")
+                    b.Property<int?>("PostId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -102,13 +102,47 @@ namespace JoinPractice.EFCore.Migrations
                     b.ToTable("Posts", (string)null);
                 });
 
+            modelBuilder.Entity("JoinPractice.EFCore.DBEntities.PostTag", b =>
+                {
+                    b.Property<int>("PostId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreateAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("PostId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("PostTags", (string)null);
+                });
+
+            modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Tag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tags", (string)null);
+                });
+
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Comment", b =>
                 {
                     b.HasOne("JoinPractice.EFCore.DBEntities.Post", "Post")
                         .WithMany("Comments")
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("PostId");
 
                     b.Navigation("Post");
                 });
@@ -122,6 +156,25 @@ namespace JoinPractice.EFCore.Migrations
                     b.Navigation("Blog");
                 });
 
+            modelBuilder.Entity("JoinPractice.EFCore.DBEntities.PostTag", b =>
+                {
+                    b.HasOne("JoinPractice.EFCore.DBEntities.Post", "Post")
+                        .WithMany("PostTags")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("JoinPractice.EFCore.DBEntities.Tag", "Tag")
+                        .WithMany("PostTags")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Blog", b =>
                 {
                     b.Navigation("Posts");
@@ -130,6 +183,13 @@ namespace JoinPractice.EFCore.Migrations
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Post", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("PostTags");
+                });
+
+            modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Tag", b =>
+                {
+                    b.Navigation("PostTags");
                 });
 #pragma warning restore 612, 618
         }

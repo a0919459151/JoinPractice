@@ -8,23 +8,31 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
 {
     public void Configure(EntityTypeBuilder<Post> builder)
     {
+        // Table
         builder.ToTable("Posts");
 
+        // Key
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Title).IsRequired().HasMaxLength(100);
-        builder.Property(x => x.Content).IsRequired();
-        builder.Property(x => x.CreateAt).IsRequired();
+        // Property
+        builder.Property(x => x.Title)
+            .IsRequired()
+            .HasMaxLength(100);
 
-        builder.HasOne(x => x.Blog).WithMany(x => x!.Posts).HasForeignKey(x => x.BlogId);
+        builder.Property(x => x.Content)
+            .IsRequired();
 
-        // many-to-many
-        builder.HasMany(e => e.PostTags)
-            .WithMany(e => e.Posts)
-            .UsingEntity(
-                "PostPostTags",
-                l => l.HasOne(typeof(PostTag)).WithMany().HasForeignKey("TagId").HasPrincipalKey(nameof(PostTag.Id)),
-                r => r.HasOne(typeof(Post)).WithMany().HasForeignKey("PostId").HasPrincipalKey(nameof(Post.Id)),
-                j => j.HasKey("PostId", "TagId"));
+        builder.Property(x => x.CreateAt)
+            .IsRequired();
+
+        // Navigation
+        builder.HasOne(x => x.Blog)
+            .WithMany(x => x!.Posts)
+            .HasForeignKey(x => x.BlogId);
+
+        builder.HasMany(x => x.Tags)
+            .WithMany(x => x.Posts)
+            .UsingEntity<PostTag>();
+                        
     }
 }

@@ -8,38 +8,32 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
+        using var context = new AppDbContext();
+
+        // Ensure database is created
+        await context.Database.EnsureCreatedAsync();
+
         // Init data
-        await DataSeeding();
-
-        using (var context = new AppDbContext())
-        {
-            /* one-to-many relationship */
-
-            await BlogLeftJoinPosts(context);
-
-            await BlogInnerJoinPosts(context);
-            
-            /* one-to-many relationship end */
+        //await DataSeeding(context);
 
 
-            /* many-to-one relationship */
+        // one-to-many relationship
 
-            await PostLeftJoinBlog(context);
-
-            await PostInnerJoinBlog(context);
-
-            /* many-to-one relationship end */
+        //await BlogLeftJoinPosts(context);
+        //await BlogInnerJoinPosts(context);
 
 
-            /* many-to-many relationship */
+        // many-to-one relationship
 
-            await PostLeftJoinPostTags(context);
+        //await PostLeftJoinBlog(context);
+        //await PostInnerJoinBlog(context);
 
 
 
-            /* many-to-many relationship end */
+        // many-to-many relationship
 
-        }
+        await PostLeftJoinPostTags(context);
+
     }
 
     private static async Task PostLeftJoinPostTags(AppDbContext context)
@@ -54,21 +48,51 @@ internal class Program
     private static async Task PostLeftJoinPostTagsWithNavProp(AppDbContext context)
     {
         var postQuery = context.Posts
-            .Include(p => p.PostTags);
+            .Include(p => p.Tags);
 
         var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[BlogId], [p].[Content], [p].[CreateAt], [p].[Title], [t].[PostId], [t].[TagId], [t].[Id], [t].[Name]
+            FROM [Posts] AS [p]
+            LEFT JOIN (
+                SELECT [p0].[PostId], [p0].[TagId], [p1].[Id], [p1].[Name]
+                FROM [Tags] AS [p0]
+                INNER JOIN [Tags] AS [p1] ON [p0].[TagId] = [p1].[Id]
+            ) AS [t] ON [p].[Id] = [t].[PostId]
+            ORDER BY [p].[Id], [t].[PostId], [t].[TagId]
+         */
 
         var posts = await postQuery.ToListAsync();
     }
 
     private static async Task PostLeftJoinPostTagsWithLinQ(AppDbContext context)
     {
-        throw new NotImplementedException();
+        
     }
 
     private static async Task PostLeftJoinPostTagsWithLambda(AppDbContext context)
     {
-        throw new NotImplementedException();
+        var postQuery = context.Posts
+            .GroupJoin(
+                context.Tags,
+                post => post.Id,
+                postTag => postTag.Id,
+                (post, postTags) => new { post, postTags })
+            .SelectMany(
+                g => g.postTags.DefaultIfEmpty(),
+                (g, postTag) => new Post
+                {
+                    Id = g.post.Id,
+                    Title = g.post.Title,
+                    Content = g.post.Content,
+                    CreateAt = g.post.CreateAt,
+                    BlogId = g.post.BlogId,
+                    Tags = g.postTags.ToList()
+                });
+
+        var sql = postQuery.ToQueryString();
+
+        var posts = await postQuery.ToListAsync();
     }
 
     private static async Task PostInnerJoinBlog(AppDbContext context)
@@ -378,10 +402,10 @@ internal class Program
     {
         var blogQuery = context.Blogs
             .Join(
-            context.Posts,
-            blog => blog.Id,
-            post => post.BlogId,
-            (blog, posts) => new { blog, posts })
+                context.Posts,
+                blog => blog.Id,
+                post => post.BlogId,
+                (blog, posts) => new { blog, posts })
             .GroupBy(bp => bp.blog)
             .Select(group => new Blog
             {
@@ -412,29 +436,24 @@ internal class Program
     }
 
     #region Data seed
-    private static async Task DataSeeding()
+    private static async Task DataSeeding(AppDbContext context)
     {
-        using (var context = new AppDbContext())
-        {
-            context.Database.EnsureCreated();
-            
-            // Begin transaction
-            using var transaction = await context.Database.BeginTransactionAsync();
+        // Begin transaction
+        using var transaction = await context.Database.BeginTransactionAsync();
 
-            // Init DB
-            await InitDB(context);
+        // Init DB
+        await InitDB(context);
 
-            await CreateTechBlog(context);  // Insert Tech Blog
+        await CreatePostTags(context);  // Insert Tags
 
-            await CreateCookBlog(context);  // Insert Cook BLog
+        await CreateTechBlog(context);  // Insert Tech Blog
 
-            await CreatePost(context);  // Insert Post
+        await CreateCookBlog(context);  // Insert Cook BLog
 
-            await context.SaveChangesAsync();
+        await CreatePost(context);  // Insert Post
 
-            // Commit transaction
-            await transaction.CommitAsync();
-        }
+        // Commit transaction
+        await transaction.CommitAsync();
     }
 
     private static async Task InitDB(AppDbContext context)
@@ -442,14 +461,35 @@ internal class Program
         context.Comments.RemoveRange(context.Comments);
         context.Posts.RemoveRange(context.Posts);
         context.Blogs.RemoveRange(context.Blogs);
+        context.Tags.RemoveRange(context.Tags);
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task CreatePostTags(AppDbContext context)
+    {
+        List<Tag> postTags = [
+            new Tag { Name = "C#" },
+            new Tag { Name = "dotnet" },
+            new Tag { Name = "EF Core" }
+        ];
+
+        await context.Tags.AddRangeAsync(postTags);
 
         await context.SaveChangesAsync();
     }
 
     private static async Task CreateTechBlog(AppDbContext context)
     {
+        var postTags = await context.Tags
+            .ToListAsync();
+
         // Create a new blog
-        var blog = new Blog { Name = "Tech Blog", CreateAt = DateTime.Now };
+        var blog = new Blog
+        {
+            Name = "Tech Blog",
+            CreateAt = DateTime.Now
+        };
 
         // Create multiple posts
         var post1 = new Post
@@ -461,7 +501,10 @@ internal class Program
             {
                 new Comment { Content = "Great post!", CreateAt = DateTime.Now },
                 new Comment { Content = "Very helpful, thanks!", CreateAt = DateTime.Now }
-            }
+            },
+            Tags = postTags
+                .Where(p => p.Name == "C#")
+                .ToList()
         };
 
         var post2 = new Post
@@ -473,13 +516,19 @@ internal class Program
             {
                 new Comment { Content = "I need more examples", CreateAt = DateTime.Now },
                 new Comment { Content = "Can you cover async/await?", CreateAt = DateTime.Now }
-            }
+            },
+            Tags = postTags
+                .Where(p => p.Name == "C#"
+                    || p.Name == "dotnet")
+                .ToList()
         };
 
         // Add posts to the blog
         blog.Posts = [post1, post2];
 
         await context.Blogs.AddAsync(blog);
+
+        await context.SaveChangesAsync();
     }
 
     private static async Task CreateCookBlog(AppDbContext context)
@@ -488,19 +537,28 @@ internal class Program
         var blog = new Blog { Name = "Cook blog", CreateAt = DateTime.Now };
 
         await context.Blogs.AddAsync(blog);
+
+        await context.SaveChangesAsync();
     }
 
     private static async Task CreatePost(AppDbContext context)
     {
+        var postTags = await context.Tags
+            .ToListAsync();
+
         // Create a new post without a blog
         var post = new Post
         {
             Title = "Entity Framework Core",
             Content = "Content about EF Core",
-            CreateAt = DateTime.Now
+            CreateAt = DateTime.Now,
+            Tags = postTags
         };
 
         await context.Posts.AddAsync(post);
+
+        await context.SaveChangesAsync();
     }
+
     #endregion
 }

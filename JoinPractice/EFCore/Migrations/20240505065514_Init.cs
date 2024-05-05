@@ -26,6 +26,19 @@ namespace JoinPractice.EFCore.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Tags",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tags", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Posts",
                 columns: table => new
                 {
@@ -34,7 +47,7 @@ namespace JoinPractice.EFCore.Migrations
                     Title = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreateAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    BlogId = table.Column<int>(type: "int", nullable: false)
+                    BlogId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -43,8 +56,7 @@ namespace JoinPractice.EFCore.Migrations
                         name: "FK_Posts_Blogs_BlogId",
                         column: x => x.BlogId,
                         principalTable: "Blogs",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -55,7 +67,7 @@ namespace JoinPractice.EFCore.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Content = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     CreateAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    PostId = table.Column<int>(type: "int", nullable: false)
+                    PostId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -64,6 +76,30 @@ namespace JoinPractice.EFCore.Migrations
                         name: "FK_Comments_Posts_PostId",
                         column: x => x.PostId,
                         principalTable: "Posts",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PostTags",
+                columns: table => new
+                {
+                    PostId = table.Column<int>(type: "int", nullable: false),
+                    TagId = table.Column<int>(type: "int", nullable: false),
+                    CreateAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PostTags", x => new { x.PostId, x.TagId });
+                    table.ForeignKey(
+                        name: "FK_PostTags_Posts_PostId",
+                        column: x => x.PostId,
+                        principalTable: "Posts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PostTags_Tags_TagId",
+                        column: x => x.TagId,
+                        principalTable: "Tags",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -77,6 +113,11 @@ namespace JoinPractice.EFCore.Migrations
                 name: "IX_Posts_BlogId",
                 table: "Posts",
                 column: "BlogId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PostTags_TagId",
+                table: "PostTags",
+                column: "TagId");
         }
 
         /// <inheritdoc />
@@ -86,7 +127,13 @@ namespace JoinPractice.EFCore.Migrations
                 name: "Comments");
 
             migrationBuilder.DropTable(
+                name: "PostTags");
+
+            migrationBuilder.DropTable(
                 name: "Posts");
+
+            migrationBuilder.DropTable(
+                name: "Tags");
 
             migrationBuilder.DropTable(
                 name: "Blogs");

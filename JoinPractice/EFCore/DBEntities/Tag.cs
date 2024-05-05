@@ -1,6 +1,6 @@
 ﻿namespace JoinPractice.EFCore.DBEntities;
 
-public class Blog
+public class Tag
 {
     // Id
     public int Id { get; set; }
@@ -8,10 +8,10 @@ public class Blog
     // Name
     public required string Name { get; set; }
 
-    // CreateAt
-    public DateTime CreateAt { get; set; } = DateTime.Now;
-
 
     // Posts
     public ICollection<Post>? Posts { get; set; } = [];
+
+    // Post-Tag join table
+    public ICollection<PostTag>? PostTags { get; set; } = [];
 }

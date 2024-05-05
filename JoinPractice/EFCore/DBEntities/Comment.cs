@@ -6,12 +6,13 @@ public class Comment
     public int Id { get; set; }
 
     // Content
-    public string Content { get; set; } = null!;
+    public required string Content { get; set; }
 
     // CreateAt
-    public DateTime CreateAt { get; set; }
+    public DateTime CreateAt { get; set; } = DateTime.Now;
+
 
     // Post
-    public int PostId { get; set; }
+    public int? PostId { get; set; }
     public Post? Post { get; set; }
 }

@@ -59,7 +59,7 @@ namespace JoinPractice.EFCore.Migrations
                     b.Property<DateTime>("CreateAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("PostId")
+                    b.Property<int?>("PostId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -101,6 +101,24 @@ namespace JoinPractice.EFCore.Migrations
 
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.PostTag", b =>
                 {
+                    b.Property<int>("PostId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreateAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("PostId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("PostTags", (string)null);
+                });
+
+            modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Tag", b =>
+                {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
@@ -114,31 +132,14 @@ namespace JoinPractice.EFCore.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PostTags", (string)null);
-                });
-
-            modelBuilder.Entity("PostPostTags", b =>
-                {
-                    b.Property<int>("PostId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TagId")
-                        .HasColumnType("int");
-
-                    b.HasKey("PostId", "TagId");
-
-                    b.HasIndex("TagId");
-
-                    b.ToTable("PostPostTags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Comment", b =>
                 {
                     b.HasOne("JoinPractice.EFCore.DBEntities.Post", "Post")
                         .WithMany("Comments")
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("PostId");
 
                     b.Navigation("Post");
                 });
@@ -152,19 +153,23 @@ namespace JoinPractice.EFCore.Migrations
                     b.Navigation("Blog");
                 });
 
-            modelBuilder.Entity("PostPostTags", b =>
+            modelBuilder.Entity("JoinPractice.EFCore.DBEntities.PostTag", b =>
                 {
-                    b.HasOne("JoinPractice.EFCore.DBEntities.Post", null)
-                        .WithMany()
+                    b.HasOne("JoinPractice.EFCore.DBEntities.Post", "Post")
+                        .WithMany("PostTags")
                         .HasForeignKey("PostId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("JoinPractice.EFCore.DBEntities.PostTag", null)
-                        .WithMany()
+                    b.HasOne("JoinPractice.EFCore.DBEntities.Tag", "Tag")
+                        .WithMany("PostTags")
                         .HasForeignKey("TagId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("Tag");
                 });
 
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Blog", b =>
@@ -175,6 +180,13 @@ namespace JoinPractice.EFCore.Migrations
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Post", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("PostTags");
+                });
+
+            modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Tag", b =>
+                {
+                    b.Navigation("PostTags");
                 });
 #pragma warning restore 612, 618
         }

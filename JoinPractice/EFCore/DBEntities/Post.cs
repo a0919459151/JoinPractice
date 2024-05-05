@@ -6,21 +6,25 @@ public class Post
     public int Id { get; set; }
 
     // Title
-    public string Title { get; set; } = null!;
+    public required string Title { get; set; }
 
     // Content
-    public string Content { get; set; } = null!;
+    public required string Content { get; set; }
 
     // CreateAt
     public DateTime CreateAt { get; set; }
+
 
     // Blog
     public int? BlogId { get; set; }
     public Blog? Blog { get; set; }
 
-    // PostTags
-    public ICollection<PostTag>? PostTags { get; set; }
+    // Post-Tag join table
+    public ICollection<PostTag>? PostTags { get; set; } = [];
+
+    // Tags
+    public ICollection<Tag>? Tags { get; set; } = [];
 
     // Comments
-    public ICollection<Comment>? Comments { get; set; }
+    public ICollection<Comment>? Comments { get; set; } = [];
 }
