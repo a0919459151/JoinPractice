@@ -9,7 +9,7 @@ internal class Program
     static async Task Main(string[] args)
     {
         // Init data
-        //await DataSeeding();
+        await DataSeeding();
 
         using (var context = new AppDbContext())
         {
@@ -31,11 +31,44 @@ internal class Program
             /* many-to-one relationship end */
 
 
-            /* one-to-one relationship */
+            /* many-to-many relationship */
 
-            /* one-to-one relationship end */
+            await PostLeftJoinPostTags(context);
+
+
+
+            /* many-to-many relationship end */
 
         }
+    }
+
+    private static async Task PostLeftJoinPostTags(AppDbContext context)
+    {
+        await PostLeftJoinPostTagsWithNavProp(context);
+
+        await PostLeftJoinPostTagsWithLinQ(context);
+
+        await PostLeftJoinPostTagsWithLambda(context);
+    }
+
+    private static async Task PostLeftJoinPostTagsWithNavProp(AppDbContext context)
+    {
+        var postQuery = context.Posts
+            .Include(p => p.PostTags);
+
+        var sql = postQuery.ToQueryString();
+
+        var posts = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostLeftJoinPostTagsWithLinQ(AppDbContext context)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static async Task PostLeftJoinPostTagsWithLambda(AppDbContext context)
+    {
+        throw new NotImplementedException();
     }
 
     private static async Task PostInnerJoinBlog(AppDbContext context)
