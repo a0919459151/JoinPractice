@@ -14,7 +14,7 @@ internal class Program
         await context.Database.EnsureCreatedAsync();
 
         // Init data
-        //await DataSeeding(context);
+        await DataSeeding(context);
 
         // one-to-many relationship
         await BlogLeftJoinPosts(context);
@@ -25,8 +25,10 @@ internal class Program
         await PostInnerJoinBlog(context);
 
         // many-to-many relationship
-        await PostJoinPostTags(context);
+        await PostLeftJoinPostTags(context);
+        await PostInnerJoinPostTags(context);
     }
+
 
     #region BlogLeftJoinPosts
     private static async Task BlogLeftJoinPosts(AppDbContext context)
@@ -214,182 +216,7 @@ internal class Program
     }
     #endregion
 
-    #region PostJoinPostTags
-    private static async Task PostJoinPostTags(AppDbContext context)
-    {
-        await PostJoinPostTagsWithNavProp(context);
-
-        await PostJoinPostTagsWithLinQ(context);
-
-        await PostJoinPostTagsWithLambda(context);
-    }
-
-    private static async Task PostJoinPostTagsWithNavProp(AppDbContext context)
-    {
-        var postQuery = context.Posts
-            .Include(p => p.Tags);
-
-        var sql = postQuery.ToQueryString();
-        /*
-            SELECT [p].[Id], [p].[BlogId], [p].[Content], [p].[CreateAt], [p].[Title], [t0].[PostId], [t0].[TagId], [t0].[CreateAt], [t0].[Id], [t0].[Name]
-            FROM [Posts] AS [p]
-            LEFT JOIN (
-                SELECT [p0].[PostId], [p0].[TagId], [p0].[CreateAt], [t].[Id], [t].[Name]
-                FROM [PostTags] AS [p0]
-                INNER JOIN [Tags] AS [t] ON [p0].[TagId] = [t].[Id]
-            ) AS [t0] ON [p].[Id] = [t0].[PostId]
-            ORDER BY [p].[Id], [t0].[PostId], [t0].[TagId]
-         */
-
-        var posts = await postQuery.ToListAsync();
-    }
-
-    private static async Task PostJoinPostTagsWithLinQ(AppDbContext context)
-    {
-        // Start with the Posts table
-        //var postQuery = from post in context.Posts
-        //                select new Post
-        //                {
-        //                    Id = post.Id,
-        //                    Title = post.Title,
-        //                    Content = post.Content,
-        //                    CreateAt = post.CreateAt,
-        //                    BlogId = post.BlogId,
-        //                    Tags = (from postTag in context.PostTags
-        //                            where postTag.PostId == post.Id
-        //                            join tag in context.Tags on postTag.TagId equals tag.Id
-        //                            select tag)
-        //                            .ToList()
-        //                };
-
-        //var sql = postQuery.ToQueryString();
-        ///*
-        //    SELECT [p].[Id], [p].[Title], [p].[Content], [p].[CreateAt], [p].[BlogId], [t0].[Id], [t0].[Name], [t0].[PostId], [t0].[TagId]
-        //    FROM [Posts] AS [p]
-        //    LEFT JOIN (
-        //        SELECT [t].[Id], [t].[Name], [p0].[PostId], [p0].[TagId]
-        //        FROM [PostTags] AS [p0]
-        //        INNER JOIN [Tags] AS [t] ON [p0].[TagId] = [t].[Id]
-        //    ) AS [t0] ON [p].[Id] = [t0].[PostId]
-        //    ORDER BY [p].[Id], [t0].[PostId], [t0].[TagId]
-        // */
-
-        //var p = await postQuery.ToListAsync();
-
-        // Start with the Join table
-        var postQuery = from postTag in context.PostTags
-                        join post in context.Posts on postTag.PostId equals post.Id
-                        join tag in context.Tags on postTag.TagId equals tag.Id
-                        group tag by post into groupedTags
-                        select new Post
-                        {
-                            Id = groupedTags.Key.Id,
-                            Title = groupedTags.Key.Title,
-                            Content = groupedTags.Key.Content,
-                            CreateAt = groupedTags.Key.CreateAt,
-                            Tags = groupedTags.ToList()
-                        };
-
-        var sql = postQuery.ToQueryString();
-        /*
-            SELECT [t0].[Id], [t0].[Title], [t0].[Content], [t0].[CreateAt], [t0].[BlogId], [t1].[Id], [t1].[Name], [t1].[PostId], [t1].[TagId], [t1].[Id0]
-            FROM (
-                SELECT [p0].[Id], [p0].[Title], [p0].[Content], [p0].[CreateAt], [p0].[BlogId]
-                FROM [PostTags] AS [p]
-                INNER JOIN [Posts] AS [p0] ON [p].[PostId] = [p0].[Id]
-                INNER JOIN [Tags] AS [t] ON [p].[TagId] = [t].[Id]
-                GROUP BY [p0].[Id], [p0].[BlogId], [p0].[Content], [p0].[CreateAt], [p0].[Title]
-            ) AS [t0]
-            LEFT JOIN (
-                SELECT [t2].[Id], [t2].[Name], [p1].[PostId], [p1].[TagId], [p2].[Id] AS [Id0], [p2].[BlogId], [p2].[Content], [p2].[CreateAt], [p2].[Title]
-                FROM [PostTags] AS [p1]
-                INNER JOIN [Posts] AS [p2] ON [p1].[PostId] = [p2].[Id]
-                INNER JOIN [Tags] AS [t2] ON [p1].[TagId] = [t2].[Id]
-            ) AS [t1] ON [t0].[Id] = [t1].[Id0] AND ([t0].[BlogId] = [t1].[BlogId] OR ([t0].[BlogId] IS NULL AND [t1].[BlogId] IS NULL)) AND [t0].[Content] = [t1].[Content] AND [t0].[CreateAt] = [t1].[CreateAt] AND [t0].[Title] = [t1].[Title]
-            ORDER BY [t0].[Id], [t0].[BlogId], [t0].[Content], [t0].[CreateAt], [t0].[Title], [t1].[PostId], [t1].[TagId], [t1].[Id0]
-         */
-
-        var posts = await postQuery.ToListAsync();
-    }
-
-    private static async Task PostJoinPostTagsWithLambda(AppDbContext context)
-    {
-        // Start with the Posts table
-        //var postQuery = context.Posts
-        //    .Select(post => new Post
-        //    {
-        //        Id = post.Id,
-        //        Title = post.Title,
-        //        Content = post.Content,
-        //        CreateAt = post.CreateAt,
-        //        BlogId = post.BlogId,
-        //        Tags = context.PostTags
-        //            .Where(postTag => postTag.PostId == post.Id)
-        //            .Join(context.Tags,
-        //                  postTag => postTag.TagId,
-        //                  tag => tag.Id,
-        //                  (postTag, tag) => tag)
-        //            .ToList()
-        //    });
-
-        //var sql = postQuery.ToQueryString();
-        ///*
-        //    SELECT [p].[Id], [p].[Title], [p].[Content], [p].[CreateAt], [p].[BlogId], [t0].[Id], [t0].[Name], [t0].[PostId], [t0].[TagId]
-        //    FROM [Posts] AS [p]
-        //    LEFT JOIN (
-        //        SELECT [t].[Id], [t].[Name], [p0].[PostId], [p0].[TagId]
-        //        FROM [PostTags] AS [p0]
-        //        INNER JOIN [Tags] AS [t] ON [p0].[TagId] = [t].[Id]
-        //    ) AS [t0] ON [p].[Id] = [t0].[PostId]
-        //    ORDER BY [p].[Id], [t0].[PostId], [t0].[TagId]
-        // */
-
-        //var posts = await postQuery.ToListAsync();
-
-        // Start with the Join table
-        var postQuery = context.PostTags
-            .Join(
-                context.Posts,
-                postTag => postTag.PostId,
-                post => post.Id,
-                (postTag, post) => new { postTag, post })
-            .Join(
-                context.Tags,
-                p => p.postTag.TagId,
-                tag => tag.Id,
-                (p, tag) => new { p.post, tag })
-            .GroupBy(p => p.post)
-            .Select(groupedTags => new Post
-            {
-                Id = groupedTags.Key.Id,
-                Title = groupedTags.Key.Title,
-                Content = groupedTags.Key.Content,
-                CreateAt = groupedTags.Key.CreateAt,
-                Tags = groupedTags.Select(p => p.tag).ToList()
-            });
-
-        var sql = postQuery.ToQueryString();
-        /*
-            SELECT [t0].[Id], [t0].[Title], [t0].[Content], [t0].[CreateAt], [t0].[BlogId], [t1].[Id], [t1].[Name], [t1].[PostId], [t1].[TagId], [t1].[Id0]
-            FROM (
-                SELECT [p0].[Id], [p0].[Title], [p0].[Content], [p0].[CreateAt], [p0].[BlogId]
-                FROM [PostTags] AS [p]
-                INNER JOIN [Posts] AS [p0] ON [p].[PostId] = [p0].[Id]
-                INNER JOIN [Tags] AS [t] ON [p].[TagId] = [t].[Id]
-                GROUP BY [p0].[Id], [p0].[BlogId], [p0].[Content], [p0].[CreateAt], [p0].[Title]
-            ) AS [t0]
-            LEFT JOIN (
-                SELECT [t2].[Id], [t2].[Name], [p1].[PostId], [p1].[TagId], [p2].[Id] AS [Id0], [p2].[BlogId], [p2].[Content], [p2].[CreateAt], [p2].[Title]
-                FROM [PostTags] AS [p1]
-                INNER JOIN [Posts] AS [p2] ON [p1].[PostId] = [p2].[Id]
-                INNER JOIN [Tags] AS [t2] ON [p1].[TagId] = [t2].[Id]
-            ) AS [t1] ON [t0].[Id] = [t1].[Id0] AND ([t0].[BlogId] = [t1].[BlogId] OR ([t0].[BlogId] IS NULL AND [t1].[BlogId] IS NULL)) AND [t0].[Content] = [t1].[Content] AND [t0].[CreateAt] = [t1].[CreateAt] AND [t0].[Title] = [t1].[Title]
-            ORDER BY [t0].[Id], [t0].[BlogId], [t0].[Content], [t0].[CreateAt], [t0].[Title], [t1].[PostId], [t1].[TagId], [t1].[Id0]
-         */
-
-        var posts = await postQuery.ToListAsync();
-    }
-    #endregion
+   
 
     #region PostInnerJoinBlog
     private static async Task PostInnerJoinBlog(AppDbContext context)
@@ -551,6 +378,232 @@ internal class Program
     }
     #endregion
 
+    #region PostLeftJoinPostTags
+    private static async Task PostLeftJoinPostTags(AppDbContext context)
+    {
+        await PostLeftJoinPostTagsWithNavProp(context);
+
+        await PostLeftJoinPostTagsWithLinQ(context);
+
+        await PostLeftJoinPostTagsWithLambda(context);
+    }
+
+    private static async Task PostLeftJoinPostTagsWithNavProp(AppDbContext context)
+    {
+        // Directly use the navigation property
+        var postQuery = context.Posts
+            .Include(p => p.Tags);
+
+        var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[BlogId], [p].[Content], [p].[CreateAt], [p].[Title], [t0].[PostId], [t0].[TagId], [t0].[CreateAt], [t0].[Id], [t0].[Name]
+            FROM [Posts] AS [p]
+            LEFT JOIN (
+                SELECT [p0].[PostId], [p0].[TagId], [p0].[CreateAt], [t].[Id], [t].[Name]
+                FROM [PostTags] AS [p0]
+                INNER JOIN [Tags] AS [t] ON [p0].[TagId] = [t].[Id]
+            ) AS [t0] ON [p].[Id] = [t0].[PostId]
+            ORDER BY [p].[Id], [t0].[PostId], [t0].[TagId]
+         */
+
+        var posts = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostLeftJoinPostTagsWithLinQ(AppDbContext context)
+    {
+        // Start with the Posts table
+        var postQuery = from post in context.Posts
+                        select new Post
+                        {
+                            Id = post.Id,
+                            Title = post.Title,
+                            Content = post.Content,
+                            CreateAt = post.CreateAt,
+                            BlogId = post.BlogId,
+                            Tags = (from postTag in context.PostTags
+                                    where postTag.PostId == post.Id
+                                    join tag in context.Tags on postTag.TagId equals tag.Id
+                                    select tag)
+                                    .ToList()
+                        };
+
+        var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[Title], [p].[Content], [p].[CreateAt], [p].[BlogId], [t0].[Id], [t0].[Name], [t0].[PostId], [t0].[TagId]
+            FROM [Posts] AS [p]
+            LEFT JOIN (
+                SELECT [t].[Id], [t].[Name], [p0].[PostId], [p0].[TagId]
+                FROM [PostTags] AS [p0]
+                INNER JOIN [Tags] AS [t] ON [p0].[TagId] = [t].[Id]
+            ) AS [t0] ON [p].[Id] = [t0].[PostId]
+            ORDER BY [p].[Id], [t0].[PostId], [t0].[TagId]
+         */
+
+        var p = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostLeftJoinPostTagsWithLambda(AppDbContext context)
+    {
+        // Start with the Posts table
+        var postQuery = context.Posts
+            .Select(post => new Post
+            {
+                Id = post.Id,
+                Title = post.Title,
+                Content = post.Content,
+                CreateAt = post.CreateAt,
+                BlogId = post.BlogId,
+                Tags = context.PostTags
+                    .Where(postTag => postTag.PostId == post.Id)
+                    .Join(context.Tags,
+                          postTag => postTag.TagId,
+                          tag => tag.Id,
+                          (postTag, tag) => tag)
+                    .ToList()
+            });
+
+        var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[Title], [p].[Content], [p].[CreateAt], [p].[BlogId], [t0].[Id], [t0].[Name], [t0].[PostId], [t0].[TagId]
+            FROM [Posts] AS [p]
+            LEFT JOIN (
+                SELECT [t].[Id], [t].[Name], [p0].[PostId], [p0].[TagId]
+                FROM [PostTags] AS [p0]
+                INNER JOIN [Tags] AS [t] ON [p0].[TagId] = [t].[Id]
+            ) AS [t0] ON [p].[Id] = [t0].[PostId]
+            ORDER BY [p].[Id], [t0].[PostId], [t0].[TagId]
+         */
+
+        var posts = await postQuery.ToListAsync();
+    }
+    #endregion
+
+    #region PostInnerJoinPostTags
+    private static async Task PostInnerJoinPostTags(AppDbContext context)
+    {
+        await PostInnerJoinPostTagsWithNavProp(context);
+
+        await PostInnerJoinPostTagsWithLinQ(context);
+
+        await PostInnerJoinPostTagsWithLambda(context);
+    }
+
+    private static async Task PostInnerJoinPostTagsWithNavProp(AppDbContext context)
+    {
+        // Use join table 
+        var postQuery = context.Posts
+            .Include(p => p.PostTags!)
+            .ThenInclude(pt => pt.Tag)
+            .Select(p => new Post
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                CreateAt = p.CreateAt,
+                BlogId = p.BlogId,
+                Tags = p.PostTags!.Select(pt => pt.Tag).ToList()
+            });
+
+        var sql = postQuery.ToQueryString();
+        /*
+            SELECT [p].[Id], [p].[Title], [p].[Content], [p].[CreateAt], [p].[BlogId], [t0].[Id], [t0].[Name], [t0].[PostId], [t0].[TagId]
+            FROM [Posts] AS [p]
+            LEFT JOIN (
+                SELECT [t].[Id], [t].[Name], [p0].[PostId], [p0].[TagId]
+                FROM [PostTags] AS [p0]
+                INNER JOIN [Tags] AS [t] ON [p0].[TagId] = [t].[Id]
+            ) AS [t0] ON [p].[Id] = [t0].[PostId]
+            ORDER BY [p].[Id], [t0].[PostId], [t0].[TagId]
+         */
+
+        var posts = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostInnerJoinPostTagsWithLinQ(AppDbContext context)
+    {
+        // Start with the Join table
+        var postQuery = from postTag in context.PostTags
+                        join post in context.Posts on postTag.PostId equals post.Id
+                        join tag in context.Tags on postTag.TagId equals tag.Id
+                        group tag by post into groupedTags
+                        select new Post
+                        {
+                            Id = groupedTags.Key.Id,
+                            Title = groupedTags.Key.Title,
+                            Content = groupedTags.Key.Content,
+                            CreateAt = groupedTags.Key.CreateAt,
+                            Tags = groupedTags.ToList()
+                        };
+
+        var sql = postQuery.ToQueryString();
+        /*
+            SELECT [t0].[Id], [t0].[Title], [t0].[Content], [t0].[CreateAt], [t0].[BlogId], [t1].[Id], [t1].[Name], [t1].[PostId], [t1].[TagId], [t1].[Id0]
+            FROM (
+                SELECT [p0].[Id], [p0].[Title], [p0].[Content], [p0].[CreateAt], [p0].[BlogId]
+                FROM [PostTags] AS [p]
+                INNER JOIN [Posts] AS [p0] ON [p].[PostId] = [p0].[Id]
+                INNER JOIN [Tags] AS [t] ON [p].[TagId] = [t].[Id]
+                GROUP BY [p0].[Id], [p0].[BlogId], [p0].[Content], [p0].[CreateAt], [p0].[Title]
+            ) AS [t0]
+            LEFT JOIN (
+                SELECT [t2].[Id], [t2].[Name], [p1].[PostId], [p1].[TagId], [p2].[Id] AS [Id0], [p2].[BlogId], [p2].[Content], [p2].[CreateAt], [p2].[Title]
+                FROM [PostTags] AS [p1]
+                INNER JOIN [Posts] AS [p2] ON [p1].[PostId] = [p2].[Id]
+                INNER JOIN [Tags] AS [t2] ON [p1].[TagId] = [t2].[Id]
+            ) AS [t1] ON [t0].[Id] = [t1].[Id0] AND ([t0].[BlogId] = [t1].[BlogId] OR ([t0].[BlogId] IS NULL AND [t1].[BlogId] IS NULL)) AND [t0].[Content] = [t1].[Content] AND [t0].[CreateAt] = [t1].[CreateAt] AND [t0].[Title] = [t1].[Title]
+            ORDER BY [t0].[Id], [t0].[BlogId], [t0].[Content], [t0].[CreateAt], [t0].[Title], [t1].[PostId], [t1].[TagId], [t1].[Id0]
+         */
+
+        var posts = await postQuery.ToListAsync();
+    }
+
+    private static async Task PostInnerJoinPostTagsWithLambda(AppDbContext context)
+    {
+        // Start with the Join table
+        var postQuery = context.PostTags
+            .Join(
+                context.Posts,
+                postTag => postTag.PostId,
+                post => post.Id,
+                (postTag, post) => new { postTag, post })
+            .Join(
+                context.Tags,
+                p => p.postTag.TagId,
+                tag => tag.Id,
+                (p, tag) => new { p.post, tag })
+            .GroupBy(p => p.post)
+            .Select(groupedTags => new Post
+            {
+                Id = groupedTags.Key.Id,
+                Title = groupedTags.Key.Title,
+                Content = groupedTags.Key.Content,
+                CreateAt = groupedTags.Key.CreateAt,
+                Tags = groupedTags.Select(p => p.tag).ToList()
+            });
+
+        var sql = postQuery.ToQueryString();
+        /*
+            SELECT [t0].[Id], [t0].[Title], [t0].[Content], [t0].[CreateAt], [t0].[BlogId], [t1].[Id], [t1].[Name], [t1].[PostId], [t1].[TagId], [t1].[Id0]
+            FROM (
+                SELECT [p0].[Id], [p0].[Title], [p0].[Content], [p0].[CreateAt], [p0].[BlogId]
+                FROM [PostTags] AS [p]
+                INNER JOIN [Posts] AS [p0] ON [p].[PostId] = [p0].[Id]
+                INNER JOIN [Tags] AS [t] ON [p].[TagId] = [t].[Id]
+                GROUP BY [p0].[Id], [p0].[BlogId], [p0].[Content], [p0].[CreateAt], [p0].[Title]
+            ) AS [t0]
+            LEFT JOIN (
+                SELECT [t2].[Id], [t2].[Name], [p1].[PostId], [p1].[TagId], [p2].[Id] AS [Id0], [p2].[BlogId], [p2].[Content], [p2].[CreateAt], [p2].[Title]
+                FROM [PostTags] AS [p1]
+                INNER JOIN [Posts] AS [p2] ON [p1].[PostId] = [p2].[Id]
+                INNER JOIN [Tags] AS [t2] ON [p1].[TagId] = [t2].[Id]
+            ) AS [t1] ON [t0].[Id] = [t1].[Id0] AND ([t0].[BlogId] = [t1].[BlogId] OR ([t0].[BlogId] IS NULL AND [t1].[BlogId] IS NULL)) AND [t0].[Content] = [t1].[Content] AND [t0].[CreateAt] = [t1].[CreateAt] AND [t0].[Title] = [t1].[Title]
+            ORDER BY [t0].[Id], [t0].[BlogId], [t0].[Content], [t0].[CreateAt], [t0].[Title], [t1].[PostId], [t1].[TagId], [t1].[Id0]
+         */
+
+        var posts = await postQuery.ToListAsync();
+    }
+    #endregion
+
     #region Data seed
     private static async Task DataSeeding(AppDbContext context)
     {
@@ -672,6 +725,16 @@ internal class Program
         };
 
         await context.Posts.AddAsync(post);
+
+        // Create a new post has no tag
+        var post2 = new Post
+        {
+            Title = "Cooking",
+            Content = "Content about Cooking",
+            CreateAt = DateTime.Now
+        };
+
+        await context.Posts.AddAsync(post2);
 
         await context.SaveChangesAsync();
     }
