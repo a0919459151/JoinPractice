@@ -43,6 +43,30 @@ namespace JoinPractice.EFCore.Migrations
                     b.ToTable("Blogs", (string)null);
                 });
 
+            modelBuilder.Entity("JoinPractice.EFCore.DBEntities.BlogHeader", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BlogId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlogId")
+                        .IsUnique()
+                        .HasFilter("[BlogId] IS NOT NULL");
+
+                    b.ToTable("BlogHeaders", (string)null);
+                });
+
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Comment", b =>
                 {
                     b.Property<int>("Id")
@@ -135,6 +159,15 @@ namespace JoinPractice.EFCore.Migrations
                     b.ToTable("Tags", (string)null);
                 });
 
+            modelBuilder.Entity("JoinPractice.EFCore.DBEntities.BlogHeader", b =>
+                {
+                    b.HasOne("JoinPractice.EFCore.DBEntities.Blog", "Blog")
+                        .WithOne("BlogHeader")
+                        .HasForeignKey("JoinPractice.EFCore.DBEntities.BlogHeader", "BlogId");
+
+                    b.Navigation("Blog");
+                });
+
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Comment", b =>
                 {
                     b.HasOne("JoinPractice.EFCore.DBEntities.Post", "Post")
@@ -174,6 +207,8 @@ namespace JoinPractice.EFCore.Migrations
 
             modelBuilder.Entity("JoinPractice.EFCore.DBEntities.Blog", b =>
                 {
+                    b.Navigation("BlogHeader");
+
                     b.Navigation("Posts");
                 });
 

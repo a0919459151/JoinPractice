@@ -39,6 +39,25 @@ namespace JoinPractice.EFCore.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BlogHeaders",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    BlogId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BlogHeaders", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BlogHeaders_Blogs_BlogId",
+                        column: x => x.BlogId,
+                        principalTable: "Blogs",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Posts",
                 columns: table => new
                 {
@@ -105,6 +124,13 @@ namespace JoinPractice.EFCore.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_BlogHeaders_BlogId",
+                table: "BlogHeaders",
+                column: "BlogId",
+                unique: true,
+                filter: "[BlogId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Comments_PostId",
                 table: "Comments",
                 column: "PostId");
@@ -123,6 +149,9 @@ namespace JoinPractice.EFCore.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "BlogHeaders");
+
             migrationBuilder.DropTable(
                 name: "Comments");
 

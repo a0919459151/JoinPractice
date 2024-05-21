@@ -18,5 +18,10 @@ public class BlogConfiguration : IEntityTypeConfiguration<Blog>
         builder.Property(x => x.Name)
             .IsRequired()
             .HasMaxLength(100);
+
+        // Navigation
+        builder.HasOne(x => x.BlogHeader)
+            .WithOne(x => x.Blog)
+            .HasForeignKey<BlogHeader>(x => x.BlogId);
     }
 }

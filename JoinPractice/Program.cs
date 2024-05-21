@@ -13,8 +13,12 @@ internal class Program
         // Ensure database is created
         await context.Database.EnsureCreatedAsync();
 
-        // Init data
-        await DataSeeding(context);
+        // Data seeding
+        await context.DataSeeding();
+
+        // one-to-one relationship
+        await BlogLeftJoinBlogHeader(context);
+        await BlogInnerJoinBlogHeader(context);
 
         // one-to-many relationship
         await BlogLeftJoinPosts(context);
@@ -29,6 +33,159 @@ internal class Program
         await PostInnerJoinPostTags(context);
     }
 
+    #region BlogLeftJoinBlogHeader
+    private static async Task BlogLeftJoinBlogHeader(AppDbContext context)
+    {
+        await BlogLeftJoinBlogHeaderWithNavProp(context);
+
+        await BlogLeftJoinBlogHeaderWithLinQ(context);
+
+        await BlogLeftJoinBlogHeaderWithLambda(context);
+    }
+
+    private static async Task BlogLeftJoinBlogHeaderWithNavProp(AppDbContext context)
+    {
+        var blogQuery = context.Blogs
+            .Include(b => b.BlogHeader);
+
+        var sql = blogQuery.ToQueryString();
+        /*
+            SELECT [b].[Id], [b].[CreateAt], [b].[Name], [b0].[Id], [b0].[BlogId], [b0].[Title]
+            FROM [Blogs] AS [b]
+            LEFT JOIN [BlogHeaders] AS [b0] ON [b].[Id] = [b0].[BlogId]
+         */
+
+        var blogs = await blogQuery.ToListAsync();
+    }
+
+    private static async Task BlogLeftJoinBlogHeaderWithLinQ(AppDbContext context)
+    {
+        // blog havs one blog header
+        var blogQuery = from blog in context.Blogs
+                        join blogHeader in context.BlogHeaders on blog.Id equals blogHeader.BlogId into blogHeaders
+                        from blogHeader in blogHeaders.DefaultIfEmpty()
+                        select new Blog
+                        {
+                            Id = blog.Id,
+                            Name = blog.Name,
+                            CreateAt = blog.CreateAt,
+                            BlogHeader = blogHeader
+                        };
+
+        var sql = blogQuery.ToQueryString();
+        /*
+            SELECT [b].[Id], [b].[Name], [b].[CreateAt], [b0].[Id], [b0].[BlogId], [b0].[Title]
+            FROM [Blogs] AS [b]
+            LEFT JOIN [BlogHeaders] AS [b0] ON [b].[Id] = [b0].[BlogId]
+         */
+
+        var blogs = await blogQuery.ToListAsync();
+    }
+
+    private static async Task BlogLeftJoinBlogHeaderWithLambda(AppDbContext context)
+    {
+        var blogQuery = context.Blogs
+            .GroupJoin(
+                context.BlogHeaders,
+                blog => blog.Id,
+                blogHeader => blogHeader.BlogId,
+                (blog, blogHeaders) => new { blog, blogHeaders })
+            .SelectMany(
+                g => g.blogHeaders.DefaultIfEmpty(),
+                (g, blogHeader) => new Blog
+                {
+                    Id = g.blog.Id,
+                    Name = g.blog.Name,
+                    CreateAt = g.blog.CreateAt,
+                    BlogHeader = blogHeader
+                });
+
+        var sql = blogQuery.ToQueryString();
+        /*
+            SELECT [b].[Id], [b].[Name], [b].[CreateAt], [b0].[Id], [b0].[BlogId], [b0].[Title]
+            FROM [Blogs] AS [b]
+            LEFT JOIN [BlogHeaders] AS [b0] ON [b].[Id] = [b0].[BlogId]
+         */
+
+        var blogs = await blogQuery.ToListAsync();
+    }
+    #endregion
+
+    #region BlogInnerJoinBlogHeader
+    private static async Task BlogInnerJoinBlogHeader(AppDbContext context)
+    {
+        await BlogInnerJoinBlogHeaderWithNavProp(context);
+
+        await BlogInnerJoinBlogHeaderWithLinQ(context);
+
+        await BlogInnerJoinBlogHeaderWithLambda(context);
+    }
+
+    private static async Task BlogInnerJoinBlogHeaderWithNavProp(AppDbContext context)
+    {
+        var blogQuery = context.Blogs
+            .Include(b => b.BlogHeader)
+            .Where(b => b.BlogHeader != null);
+
+        var sql = blogQuery.ToQueryString();
+        /*
+            SELECT [b].[Id], [b].[CreateAt], [b].[Name], [b0].[Id], [b0].[BlogId], [b0].[Title]
+            FROM [Blogs] AS [b]
+            LEFT JOIN [BlogHeaders] AS [b0] ON [b].[Id] = [b0].[BlogId]
+            WHERE [b0].[Id] IS NOT NULL
+         */
+
+        var blogs = await blogQuery.ToListAsync();
+    }
+
+    private static async Task BlogInnerJoinBlogHeaderWithLinQ(AppDbContext context)
+    {
+        var blogQuery = from blog in context.Blogs
+                        join blogHeader in context.BlogHeaders on blog.Id equals blogHeader.BlogId
+                        select new Blog
+                        {
+                            Id = blog.Id,
+                            Name = blog.Name,
+                            CreateAt = blog.CreateAt,
+                            BlogHeader = blogHeader
+                        };
+
+        var sql = blogQuery.ToQueryString();
+        /*
+            SELECT [b].[Id], [b].[Name], [b].[CreateAt], [b0].[Id], [b0].[BlogId], [b0].[Title]
+            FROM [Blogs] AS [b]
+            INNER JOIN [BlogHeaders] AS [b0] ON [b].[Id] = [b0].[BlogId]
+         */
+
+        var blogs = await blogQuery.ToListAsync();
+    }
+
+    private static async Task BlogInnerJoinBlogHeaderWithLambda(AppDbContext context)
+    {
+        var blogQuery = context.Blogs
+            .Join(
+                context.BlogHeaders,
+                blog => blog.Id,
+                blogHeader => blogHeader.BlogId,
+                (blog, blogHeader) => new { blog, blogHeader })
+            .Select(g => new Blog
+            {
+                Id = g.blog.Id,
+                Name = g.blog.Name,
+                CreateAt = g.blog.CreateAt,
+                BlogHeader = g.blogHeader
+            });
+
+        var sql = blogQuery.ToQueryString();
+        /*
+            SELECT [b].[Id], [b].[Name], [b].[CreateAt], [b0].[Id], [b0].[BlogId], [b0].[Title]
+            FROM [Blogs] AS [b]
+            INNER JOIN [BlogHeaders] AS [b0] ON [b].[Id] = [b0].[BlogId]
+         */
+
+        var blogs = await blogQuery.ToListAsync();
+    }
+    #endregion
 
     #region BlogLeftJoinPosts
     private static async Task BlogLeftJoinPosts(AppDbContext context)
@@ -216,7 +373,7 @@ internal class Program
     }
     #endregion
 
-   
+
 
     #region PostInnerJoinBlog
     private static async Task PostInnerJoinBlog(AppDbContext context)
@@ -602,142 +759,5 @@ internal class Program
 
         var posts = await postQuery.ToListAsync();
     }
-    #endregion
-
-    #region Data seed
-    private static async Task DataSeeding(AppDbContext context)
-    {
-        // Begin transaction
-        using var transaction = await context.Database.BeginTransactionAsync();
-
-        // Init DB
-        await InitDB(context);
-
-        await CreatePostTags(context);  // Insert Tags
-
-        await CreateTechBlog(context);  // Insert Tech Blog
-
-        await CreateCookBlog(context);  // Insert Cook BLog
-
-        await CreatePost(context);  // Insert Post
-
-        // Commit transaction
-        await transaction.CommitAsync();
-    }
-
-    private static async Task InitDB(AppDbContext context)
-    {
-        context.Comments.RemoveRange(context.Comments);
-        context.Posts.RemoveRange(context.Posts);
-        context.Blogs.RemoveRange(context.Blogs);
-        context.Tags.RemoveRange(context.Tags);
-
-        await context.SaveChangesAsync();
-    }
-
-    private static async Task CreatePostTags(AppDbContext context)
-    {
-        List<Tag> postTags = [
-            new Tag { Name = "C#" },
-            new Tag { Name = "dotnet" },
-            new Tag { Name = "EF Core" }
-        ];
-
-        await context.Tags.AddRangeAsync(postTags);
-
-        await context.SaveChangesAsync();
-    }
-
-    private static async Task CreateTechBlog(AppDbContext context)
-    {
-        var postTags = await context.Tags
-            .ToListAsync();
-
-        // Create a new blog
-        var blog = new Blog
-        {
-            Name = "Tech Blog",
-            CreateAt = DateTime.Now
-        };
-
-        // Create multiple p
-        var post1 = new Post
-        {
-            Title = "Introduction to C#",
-            Content = "Content about C# basics",
-            CreateAt = DateTime.Now,
-            Comments = new List<Comment>
-            {
-                new Comment { Content = "Great post!", CreateAt = DateTime.Now },
-                new Comment { Content = "Very helpful, thanks!", CreateAt = DateTime.Now }
-            },
-            Tags = postTags
-                .Where(p => p.Name == "C#")
-                .ToList()
-        };
-
-        var post2 = new Post
-        {
-            Title = "Advanced C#",
-            Content = "Content about advanced C# topics",
-            CreateAt = DateTime.Now,
-            Comments = new List<Comment>
-            {
-                new Comment { Content = "I need more examples", CreateAt = DateTime.Now },
-                new Comment { Content = "Can you cover async/await?", CreateAt = DateTime.Now }
-            },
-            Tags = postTags
-                .Where(p => p.Name == "C#"
-                    || p.Name == "dotnet")
-                .ToList()
-        };
-
-        // Add p to the blog
-        blog.Posts = [post1, post2];
-
-        await context.Blogs.AddAsync(blog);
-
-        await context.SaveChangesAsync();
-    }
-
-    private static async Task CreateCookBlog(AppDbContext context)
-    {
-        // Create a new blog with no p
-        var blog = new Blog { Name = "Cook blog", CreateAt = DateTime.Now };
-
-        await context.Blogs.AddAsync(blog);
-
-        await context.SaveChangesAsync();
-    }
-
-    private static async Task CreatePost(AppDbContext context)
-    {
-        var postTags = await context.Tags
-            .ToListAsync();
-
-        // Create a new post without a blog
-        var post = new Post
-        {
-            Title = "Entity Framework Core",
-            Content = "Content about EF Core",
-            CreateAt = DateTime.Now,
-            Tags = postTags
-        };
-
-        await context.Posts.AddAsync(post);
-
-        // Create a new post has no tag
-        var post2 = new Post
-        {
-            Title = "Cooking",
-            Content = "Content about Cooking",
-            CreateAt = DateTime.Now
-        };
-
-        await context.Posts.AddAsync(post2);
-
-        await context.SaveChangesAsync();
-    }
-
     #endregion
 }

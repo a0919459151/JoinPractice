@@ -12,6 +12,9 @@ public class Blog
     public DateTime CreateAt { get; set; } = DateTime.Now;
 
 
+    // BlogHeader
+    public BlogHeader? BlogHeader { get; set; }
+
     // Posts
     public ICollection<Post>? Posts { get; set; } = [];
 }
