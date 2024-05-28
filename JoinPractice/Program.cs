@@ -10,7 +10,8 @@ internal class Program
     {
         using var context = new AppDbContext();
 
-        // Ensure database is created
+        // Ensure Database is created, 
+        // if not, it will create the database and run the migration
         await context.Database.EnsureCreatedAsync();
 
         // Data seeding
@@ -372,8 +373,6 @@ internal class Program
         var blogs = await blogQuery.ToListAsync();
     }
     #endregion
-
-
 
     #region PostInnerJoinBlog
     private static async Task PostInnerJoinBlog(AppDbContext context)
